@@ -1,0 +1,128 @@
+plugins {
+    id 'java'
+    id 'groovy'
+    id 'application'
+    id 'jacoco'
+    id "net.nemerosa.versioning" version "2.15.1"
+    id "com.netflix.nebula.ospackage" version "11.5.0"
+    id "com.github.johnrengelman.shadow" version "7.1.2"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    annotationProcessor 'info.picocli:picocli-codegen:4.7.5'
+    implementation 'info.picocli:picocli:4.7.5'
+    implementation 'org.slf4j:slf4j-api:2.0.11'
+    implementation 'org.slf4j:slf4j-simple:2.0.11'
+    implementation 'org.apache.commons:commons-email:1.5'
+    implementation 'com.github.davidmoten:subethasmtp:5.2.4'
+    implementation 'com.github.pengrad:java-telegram-bot-api:7.2.1'
+
+    testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'
+}
+
+application {
+    getMainClass().set('biz.nellemann.mailbot.Application')
+}
+
+java {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jacoco {
+    toolVersion = "0.8.10"
+}
+
+jacocoTestReport {
+    group = "verification"
+    reports {
+        xml.required = false
+        csv.required = false
+        html.destination file("${buildDir}/reports/coverage")
+    }
+}
+test.finalizedBy jacocoTestReport
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                minimum = 0.3
+            }
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.3
+            }
+            limit {
+                counter = 'CLASS'
+                minimum = 0.4
+            }
+        }
+    }
+}
+check.dependsOn jacocoTestCoverageVerification
+
+ospackage {
+    packageName = 'mailbot'
+    release = '1'
+    user = 'root'
+    packager = "Mark Nellemann <mark.nellemann@gmail.com>"
+
+    into '/opt/mailbot'
+
+    from(shadowJar.outputs.files) {
+        into 'lib'
+    }
+
+    from('build/scriptsShadow') {
+        into 'bin'
+    }
+
+    from('doc/') {
+        into 'doc'
+    }
+
+    from(['README.md', 'LICENSE']) {
+        into 'doc'
+    }
+
+}
+
+buildRpm {
+    dependsOn startShadowScripts
+    os = "LINUX"
+}
+
+buildDeb {
+    dependsOn startShadowScripts
+}
+
+jar {
+    manifest {
+        attributes(
+            'Created-By'     : "Gradle ${gradle.gradleVersion}",
+            'Build-OS'       : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+            'Build-Jdk'      : "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
+            'Build-User'     : System.properties['user.name'],
+            'Build-Version'  : versioning.info.tag ?: (versioning.info.branch + "-" + versioning.info.build),
+            'Build-Revision' : versioning.info.commit,
+            'Build-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ss.SSSZ").toString(),
+        )
+    }
+}
+
+tasks.register("packages") {
+    group "build"
+    dependsOn ":build"
+    dependsOn ":buildDeb"
+    dependsOn ":buildRpm"
+}

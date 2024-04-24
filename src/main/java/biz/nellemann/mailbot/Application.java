@@ -1,0 +1,134 @@
+/*
+   Copyright 2024 mark.nellemann@gmail.com
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+package biz.nellemann.mailbot;
+
+import java.io.IOException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.model.request.ParseMode;
+import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.response.SendResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.subethamail.smtp.server.SMTPServer;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+
+@Command(name = "mailbot",
+        mixinStandardHelpOptions = true,
+        versionProvider = biz.nellemann.mailbot.VersionProvider.class)
+public class Application implements Callable<Integer>, MailReceivedListener {
+
+    private final static Logger log = LoggerFactory.getLogger(Application.class);
+
+
+    @CommandLine.Option(names = {"-p", "--port"}, description = "SMTP Port [default: 25].", defaultValue = "25", paramLabel = "<port>", required = true)
+    private int port;
+
+    @CommandLine.Option(names = { "-t", "--token"}, description = "Telegram Token.", required = true)
+    private String token;
+
+    @CommandLine.Option(names = { "-i", "--chat-id"}, description = "Telegram Chat ID.", required = true)
+    private String chatId;
+
+    AtomicBoolean keepRunning = new AtomicBoolean(true);
+    TelegramBot bot;
+
+    @Override
+    public Integer call() throws IOException, InterruptedException {
+
+        Runtime.getRuntime().addShutdownHook(new Thread()
+        {
+            @Override
+            public void run()
+            {
+                System.out.println("Shutdown hook ran!");
+                keepRunning.set(false);
+            }
+        });
+
+        // Setup mail event listeners
+        MailListener mailListener = new MailListener();
+        mailListener.addEventListener(this);
+
+        // Build the embedded SMTP server
+        SMTPServer smtpServer = SMTPServer.port(port)
+            .simpleMessageListener(mailListener)
+            .build();
+
+        // Start server asynchronously
+        smtpServer.start();
+
+        // Start Telegram Bot
+        bot = new TelegramBot(token);
+        sendBotMessage(chatId, "Mail Bot Started");
+
+        while (keepRunning.get()) {
+            Thread.sleep(1000);
+        }
+
+        smtpServer.stop();
+        bot.shutdown();
+        return 0;
+    }
+
+
+    public static void main(String... args) {
+        int exitCode = new CommandLine(new Application()).execute(args);
+        System.exit(exitCode);
+    }
+
+
+    @Override
+    public void onEvent(MailEvent email) {
+        String content = new String(email.getMessage().getData());
+        sendBotMessage(chatId, content);
+    }
+
+
+    private void sendBotMessage(String chatId, String content) {
+        log.info("sendBotMessage() - chatId: {}, content: {}", chatId, content);
+        SendMessage request = new SendMessage(chatId, content)
+            .parseMode(ParseMode.HTML)
+            .disableWebPagePreview(true)
+            .disableNotification(true)
+            .replyToMessageId(0);
+
+        // Sync
+        SendResponse sendResponse = bot.execute(request);
+        //boolean ok = sendResponse.isOk();
+        //Message message = sendResponse.message();
+
+        // Async
+        /*
+        bot.execute(request, new Callback<SendMessage, SendResponse>() {
+            @Override
+            public void onResponse(SendMessage request, SendResponse response) {
+
+            }
+
+            @Override
+            public void onFailure(SendMessage request, IOException e) {
+
+            }
+        });*/
+
+    }
+
+
+}
