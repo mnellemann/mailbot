@@ -2,7 +2,6 @@ package biz.nellemann.mailbot;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.subethamail.smtp.TooMuchDataException;
 import org.subethamail.smtp.helper.SimpleMessageListener;
 
 import javax.mail.Session;
@@ -53,25 +52,20 @@ public class MailListener implements SimpleMessageListener {
 
     /** Cache the messages in memory */
     @Override
-    public void deliver(String from, String recipient, InputStream data) throws TooMuchDataException, IOException
-    {
-        if (log.isDebugEnabled())
-            log.debug("Delivering mail from {} to {}", from, recipient);
+    public void deliver(String from, String recipient, InputStream data) throws IOException {
+        log.debug("Delivering mail from {} to {}", from, recipient);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         data = new BufferedInputStream(data);
 
         // read the data from the stream
         int current;
-        while ((current = data.read()) >= 0)
-        {
+        while ((current = data.read()) >= 0) {
             out.write(current);
         }
 
         byte[] bytes = out.toByteArray();
-
-        if (log.isDebugEnabled())
-            log.debug("Creating message from data with {} bytes", bytes.length);
+        log.debug("Creating message from data with {} bytes", bytes.length);
 
         MailMessage message = new MailMessage(this, from, recipient, bytes);
         MailEvent mail = new MailEvent(this, message);
@@ -82,8 +76,7 @@ public class MailListener implements SimpleMessageListener {
     /**
      * Creates the JavaMail Session object for use in WiserMessage
      */
-    protected Session getSession()
-    {
+    protected Session getSession() {
         return Session.getDefaultInstance(new Properties());
     }
 

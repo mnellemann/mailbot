@@ -13,6 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
+
 package biz.nellemann.mailbot;
 
 import java.io.IOException;
@@ -52,17 +53,10 @@ public class Application implements Callable<Integer>, MailReceivedListener {
     @Override
     public Integer call() throws IOException, InterruptedException {
 
-        Runtime.getRuntime().addShutdownHook(new Thread()
-        {
-            @Override
-            public void run()
-            {
-                System.out.println("Shutdown hook ran!");
-                keepRunning.set(false);
-            }
-        });
+        // Shutdown hook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> keepRunning.set(false)));
 
-        // Setup mail event listeners
+        // Setup mail event listener
         MailListener mailListener = new MailListener();
         mailListener.addEventListener(this);
 
@@ -71,7 +65,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
             .simpleMessageListener(mailListener)
             .build();
 
-        // Start server asynchronously
+        // Start SMTP server asynchronously
         smtpServer.start();
 
         // Start Telegram Bot
