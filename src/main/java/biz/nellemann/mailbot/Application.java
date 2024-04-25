@@ -17,10 +17,15 @@
 package biz.nellemann.mailbot;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.UpdatesListener;
+import com.pengrad.telegrambot.model.Message;
+import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
@@ -29,6 +34,8 @@ import org.slf4j.LoggerFactory;
 import org.subethamail.smtp.server.SMTPServer;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+
+import javax.mail.MessagingException;
 
 @Command(name = "mailbot",
         mixinStandardHelpOptions = true,
@@ -70,7 +77,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
 
         // Start Telegram Bot
         bot = new TelegramBot(token);
-        sendBotMessage(chatId, "Mail Bot Started");
+        sendBotMessage(chatId, "*Mail Bot* _started_");
 
         while (keepRunning.get()) {
             Thread.sleep(1000);
@@ -89,24 +96,38 @@ public class Application implements Callable<Integer>, MailReceivedListener {
 
 
     @Override
-    public void onEvent(MailEvent email) {
-        String content = new String(email.getMessage().getData());
-        sendBotMessage(chatId, content);
+    public void onEvent(MailEvent event) {
+        //String content = new String(email.getMessage().getData());
+        try {
+            String content = (String) event.getMessage().getMimeMessage().getContent();
+            String message = String.format("*From*: %s\n*To*: %s\n*Subject*: %s\n\n```\n%s\n```",
+                event.getMessage().envelopeSender,
+                event.getMessage().envelopeReceiver,
+                event.getMessage().getMimeMessage().getSubject(),
+                content);
+            sendBotMessage(chatId, message);
+        } catch (MessagingException | IOException e) {
+            log.error("onEvent() - error: {}", e.getMessage());
+        }
     }
 
 
     private void sendBotMessage(String chatId, String content) {
-        log.info("sendBotMessage() - chatId: {}, content: {}", chatId, content);
+        log.debug("sendBotMessage() - chatId: {}, content: {}", chatId, content);
         SendMessage request = new SendMessage(chatId, content)
-            .parseMode(ParseMode.HTML)
+            .parseMode(ParseMode.MarkdownV2)
             .disableWebPagePreview(true)
             .disableNotification(true)
             .replyToMessageId(0);
 
         // Sync
         SendResponse sendResponse = bot.execute(request);
-        //boolean ok = sendResponse.isOk();
-        //Message message = sendResponse.message();
+        boolean ok = sendResponse.isOk();
+        if(!ok) {
+            Message message = sendResponse.message();
+            log.warn("sendBotMessage() - message was no sent.");
+            log.info(message.text());
+        }
 
         // Async
         /*

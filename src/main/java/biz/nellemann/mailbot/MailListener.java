@@ -53,7 +53,7 @@ public class MailListener implements SimpleMessageListener {
     /** Cache the messages in memory */
     @Override
     public void deliver(String from, String recipient, InputStream data) throws IOException {
-        log.debug("Delivering mail from {} to {}", from, recipient);
+        log.debug("deliver() - Delivering mail from {} to {}", from, recipient);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         data = new BufferedInputStream(data);
@@ -65,7 +65,7 @@ public class MailListener implements SimpleMessageListener {
         }
 
         byte[] bytes = out.toByteArray();
-        log.debug("Creating message from data with {} bytes", bytes.length);
+        log.debug("deliver() - Creating message from data with {} bytes", bytes.length);
 
         MailMessage message = new MailMessage(this, from, recipient, bytes);
         MailEvent mail = new MailEvent(this, message);
@@ -87,7 +87,7 @@ public class MailListener implements SimpleMessageListener {
 
     private synchronized void sendEvent(MailEvent email) {
         for (MailReceivedListener eventListener : eventListeners) {
-            log.info("sendEvent() - Sending event to: {}", eventListener);
+            log.debug("sendEvent() - Sending event to: {}", eventListener);
             eventListener.onEvent(email);
         }
     }

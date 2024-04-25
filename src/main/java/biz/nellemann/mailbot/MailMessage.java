@@ -5,16 +5,16 @@ import javax.mail.internet.MimeMessage;
 import java.io.ByteArrayInputStream;
 import java.io.PrintStream;
 
-public class MailMessage
-{
+public class MailMessage {
+
     byte[] messageData;
-    MailListener wiser;
+    MailListener listener;
     String envelopeSender;
     String envelopeReceiver;
 
 
-    MailMessage(MailListener wiser, String envelopeSender, String envelopeReceiver, byte[] messageData) {
-        this.wiser = wiser;
+    MailMessage(MailListener listener, String envelopeSender, String envelopeReceiver, byte[] messageData) {
+        this.listener = listener;
         this.envelopeSender = envelopeSender;
         this.envelopeReceiver = envelopeReceiver;
         this.messageData = messageData;
@@ -26,7 +26,7 @@ public class MailMessage
      * @throws MessagingException
      */
     public MimeMessage getMimeMessage() throws MessagingException {
-        return new MimeMessage(this.wiser.getSession(), new ByteArrayInputStream(this.messageData));
+        return new MimeMessage(this.listener.getSession(), new ByteArrayInputStream(this.messageData));
     }
 
     /**
