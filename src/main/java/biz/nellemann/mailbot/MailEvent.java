@@ -1,5 +1,5 @@
 /*
-   Copyright 2020 mark.nellemann@gmail.com
+   Copyright 2024 mark.nellemann@gmail.com
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
    limitations under the License.
  */
 package biz.nellemann.mailbot;
-
-import org.subethamail.wiser.WiserMessage;
 
 import java.util.EventObject;
 

@@ -16,28 +16,21 @@
 
 package biz.nellemann.mailbot;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.UpdatesListener;
-import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SendPhoto;
 import com.pengrad.telegrambot.response.SendResponse;
+import io.github.furstenheim.CopyDown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.subethamail.smtp.MessageHandler;
-import org.subethamail.smtp.examples.BasicSMTPServer;
 import org.subethamail.smtp.server.SMTPServer;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-import javax.mail.MessagingException;
 
 @Command(name = "mailbot",
         mixinStandardHelpOptions = true,
@@ -46,14 +39,15 @@ public class Application implements Callable<Integer>, MailReceivedListener {
 
     private final static Logger log = LoggerFactory.getLogger(Application.class);
 
+    private final CopyDown markdownConverter = new CopyDown();
 
-    @CommandLine.Option(names = {"-p", "--port"}, description = "SMTP Port [default: 25].", defaultValue = "2525", paramLabel = "<port>", required = true)
+    @CommandLine.Option(names = {"-p", "--port"}, description = "SMTP Port [default: 25].", defaultValue = "25", paramLabel = "<port>", required = true)
     private int port;
 
-    @CommandLine.Option(names = { "-t", "--token"}, description = "Telegram Token.", required = true, defaultValue = "7143435128:AAEBQLWrXCiOlg5LSFo9Se6TZgU4DdUiMgs")
+    @CommandLine.Option(names = { "-t", "--token"}, description = "Telegram Token.", required = true)
     private String token;
 
-    @CommandLine.Option(names = { "-i", "--chat-id"}, description = "Telegram Chat ID.", required = true, defaultValue = "-4191748164")
+    @CommandLine.Option(names = { "-i", "--chat-id"}, description = "Telegram Chat ID.", required = true)
     private String chatId;
 
     AtomicBoolean keepRunning = new AtomicBoolean(true);
@@ -101,19 +95,36 @@ public class Application implements Callable<Integer>, MailReceivedListener {
 
     @Override
     public void onEvent(MailEvent event) {
-        SendMessage message;
-        if(event.getMessage().hasHtml()) {
-            message = new SendMessage(chatId, event.getMessage().getHtml())
-                .parseMode(ParseMode.HTML)
-                .disableWebPagePreview(true)
-                .disableNotification(true);
+
+        String body;
+        ParseMode parseMode = ParseMode.Markdown;
+        if(event.getMessage().hasText()) {
+            body = event.getMessage().getText();
+        } else if (event.getMessage().hasHtml()) {
+            body = markdownConverter.convert(event.getMessage().getHtml());
         } else {
-            message = new SendMessage(chatId, event.getMessage().getText())
-                .parseMode(ParseMode.Markdown)
+            body = "";
+        }
+
+        String bodyWithHeader = String.format("*Sender*: %s\n*Recipient*: %s\n*Subject*: %s\n\n%s",
+            event.getMessage().getSender(),
+            event.getMessage().getRecipient(),
+            event.getMessage().getSubject(),
+            body);
+
+        if(event.getMessage().hasImage()) {
+            SendPhoto photo = new SendPhoto(chatId, event.getMessage().getImage())
+                .caption(bodyWithHeader)
+                .parseMode(parseMode)
+                .disableNotification(true);
+            sendPhoto(chatId, photo);
+        } else {
+            SendMessage message = new SendMessage(chatId, bodyWithHeader)
+                .parseMode(parseMode)
                 .disableWebPagePreview(true)
                 .disableNotification(true);
+            sendMessage(chatId, message);
         }
-        sendMessage(chatId, message);
     }
 
 
@@ -128,20 +139,33 @@ public class Application implements Callable<Integer>, MailReceivedListener {
         SendResponse sendResponse = bot.execute(request);
         boolean ok = sendResponse.isOk();
         if(!ok) {
-            log.warn("sendText() - text was not sent: {}", sendResponse);
+            log.warn("sendText() - text was not sent: {}, error", sendResponse.errorCode());
         }
 
     }
 
+
     private void sendMessage(String chatId,  SendMessage message) {
-        log.info("sendMessage() - chatId: {}, message: {}", chatId, message);
+        log.info("sendMessage() - chatId: {}", chatId);
 
         SendResponse sendResponse = bot.execute(message);
         boolean ok = sendResponse.isOk();
         if(!ok) {
-            log.warn("sendBotMessage() - message was not sent: {}", sendResponse);
+            log.warn("sendMessage() - message was not sent, error: {}", sendResponse.errorCode());
+        }
+    }
+
+
+    private void sendPhoto(String chatId,  SendPhoto photo) {
+        log.info("sendPhoto() - chatId: {}", chatId);
+
+        SendResponse sendResponse = bot.execute(photo);
+        boolean ok = sendResponse.isOk();
+        if(!ok) {
+            log.warn("sendPhoto() - photo was not sent, error: {}", sendResponse.errorCode());
         }
 
     }
+
 
 }

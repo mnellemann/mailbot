@@ -29,15 +29,15 @@ public class MailHandler implements BasicMessageListener {
     }
 
     @Override
-    public void messageArrived(MessageContext messageContext, String from, String to, byte[] data) throws RejectException {
-        MailEvent event = new MailEvent(this, getMessage(from, to, data));
+    public void messageArrived(MessageContext messageContext, String sender, String recipient, byte[] data) throws RejectException {
+        MailEvent event = new MailEvent(this, getMessage(sender, recipient, data));
         sendEvent(event);
     }
 
 
-    public MailMessage getMessage(String from, String to, byte[] data) {
+    public MailMessage getMessage(String sender, String recipient, byte[] data) {
 
-        MailMessage mailMessage = new MailMessage(from, to);
+        MailMessage mailMessage = new MailMessage(sender, recipient);
 
         try {
             MimeMessage mimeMessage = new MimeMessage(session, new ByteArrayInputStream(data));
@@ -49,7 +49,6 @@ public class MailHandler implements BasicMessageListener {
                 log.debug("getMessage() - MimeMultipart");
                 MimeMultipart content = (MimeMultipart) mimeMessage.getContent();
                 for(int i = 0; i < content.getCount(); i++) {
-                    log.debug(content.getBodyPart(i).getContentType());
                     mailMessage.addContent(content.getBodyPart(i).getContentType(), content.getBodyPart(i).getContent());
                 }
             } else {

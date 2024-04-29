@@ -5,6 +5,7 @@ Mailbot is an SMTP to Telegram Gateway.
 - Starts an embedded SMTP server, waits for (any email) and forwards to a specific Telegram chat
 - Useful if you have systems or services that insists on using SMTP for notifications, alerts, etc.
 - Use only on protected/closed networks with no public access (to mailbot on port 25)
+- Parses plain/text emails with an optional image attached.
 
 ## Installation
 
