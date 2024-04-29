@@ -1,86 +1,113 @@
 package biz.nellemann.mailbot;
 
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-import java.io.ByteArrayInputStream;
-import java.io.PrintStream;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MailMessage {
 
-    byte[] messageData;
-    MailListener listener;
     String envelopeSender;
     String envelopeReceiver;
+    String subject;
+    List<BodyContent> contentList = new ArrayList<>();
 
+    MailMessage() {}
 
-    MailMessage(MailListener listener, String envelopeSender, String envelopeReceiver, byte[] messageData) {
-        this.listener = listener;
+    MailMessage(String envelopeSender, String envelopeReceiver) {
         this.envelopeSender = envelopeSender;
         this.envelopeReceiver = envelopeReceiver;
-        this.messageData = messageData;
     }
 
 
-    /**
-     * Generate a JavaMail MimeMessage.
-     * @throws MessagingException
-     */
-    public MimeMessage getMimeMessage() throws MessagingException {
-        return new MimeMessage(this.listener.getSession(), new ByteArrayInputStream(this.messageData));
+    public void setEnvelopeSender(String envelopeSender) {
+        this.envelopeSender = envelopeSender;
     }
 
-    /**
-     * Get the raw message DATA.
-     */
-    public byte[] getData() {
-        return this.messageData;
+    public void setEnvelopeReceiver(String envelopeReceiver) {
+        this.envelopeReceiver = envelopeReceiver;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public void addContent(String type, Object data) {
+        contentList.add(new BodyContent(type, data));
     }
 
 
-    /**
-     * Get the RCPT TO:
-     */
+    public String getSubject() {
+        return subject;
+    }
+
+
+    public String getText() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("text/plain"))
+            .findFirst()
+            .orElse(null);
+
+        String body = (content != null ? (String) content.data : "");
+        String response = String.format("*From*: %s\n*To*: %s\n*Subject* %s\n\n%s", envelopeSender, envelopeReceiver, subject, body);
+        return response;
+    }
+
+
+    public boolean hasText() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("text/plain"))
+            .findFirst()
+            .orElse(null);
+
+        return (content != null);
+    }
+
+
+    public String getHtml() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("text/html"))
+            .findFirst()
+            .orElse(null);
+
+        String body = (content != null ? (String) content.data : "");
+        String response = String.format("<b>From</b>: %s<br/><b>To</b>: %s<br/><b>Subject</b> %s<br/><br/>%s", envelopeSender, envelopeReceiver, subject, body);
+        return response;
+    }
+
+    public boolean hasHtml() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("text/html"))
+            .findFirst()
+            .orElse(null);
+
+        return (content != null);
+    }
+
     public String getEnvelopeReceiver() {
         return this.envelopeReceiver;
     }
 
 
-    /**
-     * Get the MAIL FROM:
-     */
     public String getEnvelopeSender() {
         return this.envelopeSender;
     }
 
 
-    /**
-     * Dumps the rough contents of the message for debugging purposes
-     */
-    public void dumpMessage(PrintStream out) throws MessagingException {
-        out.println("===== Dumping message =====");
+    private static class BodyContent {
 
-        out.println("Envelope sender: " + this.getEnvelopeSender());
-        out.println("Envelope recipient: " + this.getEnvelopeReceiver());
+        String type;
+        Object data;
 
-        // It should all be convertible with ascii or utf8
-        String content = new String(this.getData());
-        out.println(content);
+        BodyContent(String type, Object data) {
+            this.type = type;
+            this.data = data;
+        }
 
-        out.println("===== End message dump =====");
     }
 
-
-    /**
-     * Implementation of toString()
-     *
-     * @return getData() as a string or an empty string if getData is null
-     */
     @Override
     public String toString() {
-        if (this.getData() == null)
-            return "";
-
-        return new String(this.getData());
+        return String.format("From: %; To: %s; Subject: %s", envelopeSender, envelopeReceiver, subject);
     }
 
 }

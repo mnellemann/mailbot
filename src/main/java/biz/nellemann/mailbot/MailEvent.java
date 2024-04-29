@@ -15,6 +15,8 @@
  */
 package biz.nellemann.mailbot;
 
+import org.subethamail.wiser.WiserMessage;
+
 import java.util.EventObject;
 
 public class MailEvent extends EventObject {

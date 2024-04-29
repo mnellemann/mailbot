@@ -31,6 +31,8 @@ import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.subethamail.smtp.MessageHandler;
+import org.subethamail.smtp.examples.BasicSMTPServer;
 import org.subethamail.smtp.server.SMTPServer;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -45,13 +47,13 @@ public class Application implements Callable<Integer>, MailReceivedListener {
     private final static Logger log = LoggerFactory.getLogger(Application.class);
 
 
-    @CommandLine.Option(names = {"-p", "--port"}, description = "SMTP Port [default: 25].", defaultValue = "25", paramLabel = "<port>", required = true)
+    @CommandLine.Option(names = {"-p", "--port"}, description = "SMTP Port [default: 25].", defaultValue = "2525", paramLabel = "<port>", required = true)
     private int port;
 
-    @CommandLine.Option(names = { "-t", "--token"}, description = "Telegram Token.", required = true)
+    @CommandLine.Option(names = { "-t", "--token"}, description = "Telegram Token.", required = true, defaultValue = "7143435128:AAEBQLWrXCiOlg5LSFo9Se6TZgU4DdUiMgs")
     private String token;
 
-    @CommandLine.Option(names = { "-i", "--chat-id"}, description = "Telegram Chat ID.", required = true)
+    @CommandLine.Option(names = { "-i", "--chat-id"}, description = "Telegram Chat ID.", required = true, defaultValue = "-4191748164")
     private String chatId;
 
     AtomicBoolean keepRunning = new AtomicBoolean(true);
@@ -64,27 +66,28 @@ public class Application implements Callable<Integer>, MailReceivedListener {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> keepRunning.set(false)));
 
         // Setup mail event listener
-        MailListener mailListener = new MailListener();
-        mailListener.addEventListener(this);
+        MailHandler mailHandler = new MailHandler();
+        mailHandler.addEventListener(this);
 
         // Build the embedded SMTP server
         SMTPServer smtpServer = SMTPServer.port(port)
-            .simpleMessageListener(mailListener)
+            .messageHandler(mailHandler)
             .build();
+
 
         // Start SMTP server asynchronously
         smtpServer.start();
 
         // Start Telegram Bot
         bot = new TelegramBot(token);
-        sendBotMessage(chatId, "*Mail Bot* _started_");
+        sendText(chatId, "*Mail Bot* _started_");
 
         while (keepRunning.get()) {
             Thread.sleep(1000);
         }
 
         smtpServer.stop();
-        sendBotMessage(chatId, "*Mail Bot* _stopped_");
+        sendText(chatId, "*Mail Bot* _stopped_");
         bot.shutdown();
         return 0;
     }
@@ -98,38 +101,47 @@ public class Application implements Callable<Integer>, MailReceivedListener {
 
     @Override
     public void onEvent(MailEvent event) {
-        //String content = new String(email.getMessage().getData());
-        try {
-            String content = (String) event.getMessage().getMimeMessage().getContent();
-            String message = String.format("*From*: %s\n*To*: %s\n*Subject*: %s\n\n```\n%s\n```",
-                event.getMessage().envelopeSender,
-                event.getMessage().envelopeReceiver,
-                event.getMessage().getMimeMessage().getSubject(),
-                content);
-            sendBotMessage(chatId, message);
-        } catch (MessagingException | IOException e) {
-            log.error("onEvent() - error: {}", e.getMessage());
+        SendMessage message;
+        if(event.getMessage().hasHtml()) {
+            message = new SendMessage(chatId, event.getMessage().getHtml())
+                .parseMode(ParseMode.HTML)
+                .disableWebPagePreview(true)
+                .disableNotification(true);
+        } else {
+            message = new SendMessage(chatId, event.getMessage().getText())
+                .parseMode(ParseMode.Markdown)
+                .disableWebPagePreview(true)
+                .disableNotification(true);
         }
+        sendMessage(chatId, message);
     }
 
 
-    private void sendBotMessage(String chatId, String content) {
-        log.debug("sendBotMessage() - chatId: {}, content: {}", chatId, content);
-        SendMessage request = new SendMessage(chatId, content)
-            .parseMode(ParseMode.MarkdownV2)
+    private void sendText(String chatId, String text) {
+        log.info("sendText() - chatId: {}, text: {}", chatId, text);
+
+        SendMessage request = new SendMessage(chatId, text)
+            .parseMode(ParseMode.Markdown)
             .disableWebPagePreview(true)
-            .disableNotification(true)
-            .replyToMessageId(0);
+            .disableNotification(true);
 
         SendResponse sendResponse = bot.execute(request);
         boolean ok = sendResponse.isOk();
         if(!ok) {
-            Message message = sendResponse.message();
-            log.warn("sendBotMessage() - message was no sent.");
-            log.info(message.text());
+            log.warn("sendText() - text was not sent: {}", sendResponse);
         }
 
     }
 
+    private void sendMessage(String chatId,  SendMessage message) {
+        log.info("sendMessage() - chatId: {}, message: {}", chatId, message);
+
+        SendResponse sendResponse = bot.execute(message);
+        boolean ok = sendResponse.isOk();
+        if(!ok) {
+            log.warn("sendBotMessage() - message was not sent: {}", sendResponse);
+        }
+
+    }
 
 }
