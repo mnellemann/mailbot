@@ -1,15 +1,16 @@
 # Mail Bot
 
-_This is only for protected/closed networks with no public access (to mailbot on port 25)._
+Mailbot is an SMTP to Telegram Gateway.
 
-**What**
+- Starts an embedded SMTP server, waits for (any email) and forwards to a specific Telegram chat
+- Useful if you have systems or services that insists on using SMTP for notifications, alerts, etc.
+- Use only on protected/closed networks with no public access (to mailbot on port 25)
 
-Start an embedded SMTP server, wait for (any email) and forward it to a specific Telegram chat.
+## Installation
 
-**Why**
-
-Useful for those older systems that insists on using SMTP for notifications, alerts, etc.
-
+- Requires Java runtime version 8 or later.
+- [Download](https://github.com/mnellemann/mailbot/releases) and install the .rpm or .deb package and execute ```/opt/mailbox/bin/mailbot```
+- Or [download](https://github.com/mnellemann/mailbot/releases) the .jar file and execute ```java -jar /path/to/mailbot-x.y.z-all.jar```
 
 ## Usage
 
@@ -21,11 +22,3 @@ Usage: mailbot [-hV] -i=<chatId> [-p=<port>] -t=<token>
   -t, --token=<token>      Telegram Token.
   -V, --version            Print version information and exit.
 ```
-
-## Installation
-
-Requires Java runtime version 8 or later.
-
-Download and install .rpm or .deb package, install and execute ```/opt/mailbox/bin/mailbot```.
-
-Or download .jar file and execute ```java -jar /path/to/mailbot-x.y.z.jar```.

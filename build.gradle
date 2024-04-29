@@ -3,8 +3,8 @@ plugins {
     id 'groovy'
     id 'application'
     id 'jacoco'
-    id "net.nemerosa.versioning" version "2.15.1"
-    id "com.netflix.nebula.ospackage" version "11.5.0"
+    id "net.nemerosa.versioning" version "3.1.0"
+    id "com.netflix.nebula.ospackage" version "11.8.1"
     id "com.github.johnrengelman.shadow" version "7.1.2"
 }
 
@@ -15,10 +15,10 @@ repositories {
 dependencies {
     annotationProcessor 'info.picocli:picocli-codegen:4.7.5'
     implementation 'info.picocli:picocli:4.7.5'
-    implementation 'org.slf4j:slf4j-api:2.0.11'
-    implementation 'org.slf4j:slf4j-simple:2.0.11'
+    implementation 'org.slf4j:slf4j-api:2.0.12'
+    implementation 'org.slf4j:slf4j-simple:2.0.13'
     implementation 'org.apache.commons:commons-email:1.5'
-    implementation 'com.github.davidmoten:subethasmtp:5.2.4'
+    implementation 'com.github.davidmoten:subethasmtp:7.0.2'
     implementation 'com.github.pengrad:java-telegram-bot-api:7.2.1'
 
     testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'

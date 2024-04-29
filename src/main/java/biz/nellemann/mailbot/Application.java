@@ -58,7 +58,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
     TelegramBot bot;
 
     @Override
-    public Integer call() throws IOException, InterruptedException {
+    public Integer call() throws InterruptedException {
 
         // Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> keepRunning.set(false)));
@@ -84,6 +84,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
         }
 
         smtpServer.stop();
+        sendBotMessage(chatId, "*Mail Bot* _stopped_");
         bot.shutdown();
         return 0;
     }
@@ -120,7 +121,6 @@ public class Application implements Callable<Integer>, MailReceivedListener {
             .disableNotification(true)
             .replyToMessageId(0);
 
-        // Sync
         SendResponse sendResponse = bot.execute(request);
         boolean ok = sendResponse.isOk();
         if(!ok) {
@@ -128,20 +128,6 @@ public class Application implements Callable<Integer>, MailReceivedListener {
             log.warn("sendBotMessage() - message was no sent.");
             log.info(message.text());
         }
-
-        // Async
-        /*
-        bot.execute(request, new Callback<SendMessage, SendResponse>() {
-            @Override
-            public void onResponse(SendMessage request, SendResponse response) {
-
-            }
-
-            @Override
-            public void onFailure(SendMessage request, IOException e) {
-
-            }
-        });*/
 
     }
 
