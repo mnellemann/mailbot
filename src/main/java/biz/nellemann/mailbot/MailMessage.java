@@ -1,86 +1,138 @@
 package biz.nellemann.mailbot;
 
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-import java.io.ByteArrayInputStream;
-import java.io.PrintStream;
+
+import com.sun.mail.util.BASE64DecoderStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MailMessage {
 
-    byte[] messageData;
-    MailListener listener;
-    String envelopeSender;
-    String envelopeReceiver;
+    private final static Logger log = LoggerFactory.getLogger(MailMessage.class);
 
+    String sender;
+    String recipient;
+    String subject;
+    List<BodyContent> contentList = new ArrayList<>();
 
-    MailMessage(MailListener listener, String envelopeSender, String envelopeReceiver, byte[] messageData) {
-        this.listener = listener;
-        this.envelopeSender = envelopeSender;
-        this.envelopeReceiver = envelopeReceiver;
-        this.messageData = messageData;
+    MailMessage() {}
+
+    MailMessage(String sender, String recipient) {
+        this.sender = sender;
+        this.recipient = recipient;
     }
 
 
-    /**
-     * Generate a JavaMail MimeMessage.
-     * @throws MessagingException
-     */
-    public MimeMessage getMimeMessage() throws MessagingException {
-        return new MimeMessage(this.listener.getSession(), new ByteArrayInputStream(this.messageData));
+    public void setSubject(String subject) {
+        this.subject = subject;
     }
 
-    /**
-     * Get the raw message DATA.
-     */
-    public byte[] getData() {
-        return this.messageData;
+    public void addContent(String type, Object data) {
+        contentList.add(new BodyContent(type, data));
+    }
+
+    public String getSubject() {
+        return subject;
     }
 
 
-    /**
-     * Get the RCPT TO:
-     */
-    public String getEnvelopeReceiver() {
-        return this.envelopeReceiver;
+    public String getText() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("text/plain"))
+            .findFirst()
+            .orElse(null);
+        return (content != null ? (String) content.data : "");
     }
 
 
-    /**
-     * Get the MAIL FROM:
-     */
-    public String getEnvelopeSender() {
-        return this.envelopeSender;
+    public boolean hasText() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("text/plain"))
+            .findFirst()
+            .orElse(null);
+        return (content != null);
     }
 
 
-    /**
-     * Dumps the rough contents of the message for debugging purposes
-     */
-    public void dumpMessage(PrintStream out) throws MessagingException {
-        out.println("===== Dumping message =====");
-
-        out.println("Envelope sender: " + this.getEnvelopeSender());
-        out.println("Envelope recipient: " + this.getEnvelopeReceiver());
-
-        // It should all be convertible with ascii or utf8
-        String content = new String(this.getData());
-        out.println(content);
-
-        out.println("===== End message dump =====");
+    public String getHtml() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("text/html"))
+            .findFirst()
+            .orElse(null);
+        return (content != null ? (String) content.data : "");
     }
 
 
-    /**
-     * Implementation of toString()
-     *
-     * @return getData() as a string or an empty string if getData is null
-     */
+    public boolean hasHtml() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("text/html"))
+            .findFirst()
+            .orElse(null);
+        return (content != null);
+    }
+
+
+    public boolean hasImage() {
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("image/"))
+            .findFirst()
+            .orElse(null);
+        return (content != null);
+    }
+
+
+    public byte[] getImage() {
+
+        BodyContent content = contentList.stream()
+            .filter(e -> e.type.startsWith("image/"))
+            .findFirst()
+            .orElse(null);
+
+        if(content != null) {
+            try {
+                BASE64DecoderStream stream = (BASE64DecoderStream) content.data;
+                byte[] buffer = null;
+                buffer = new byte[stream.available()];
+                stream.read(buffer, 0, buffer.length);
+                return buffer;
+            } catch (IOException e) {
+                log.error("getImage() - error: {}", e.getMessage());
+            }
+        }
+
+        return null;
+    }
+
+
+    public String getRecipient() {
+        return this.recipient;
+    }
+
+
+    public String getSender() {
+        return this.sender;
+    }
+
+
+    private static class BodyContent {
+
+        String type;
+        Object data;
+
+        BodyContent(String type, Object data) {
+            this.type = type;
+            this.data = data;
+        }
+
+    }
+
+
     @Override
     public String toString() {
-        if (this.getData() == null)
-            return "";
-
-        return new String(this.getData());
+        return String.format("Sender: %; Recipient: %s; Subject: %s", sender, recipient, subject);
     }
 
 }
