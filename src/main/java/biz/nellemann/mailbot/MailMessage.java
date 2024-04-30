@@ -44,9 +44,7 @@ public class MailMessage {
             .filter(e -> e.type.startsWith("text/plain"))
             .findFirst()
             .orElse(null);
-
         return (content != null ? (String) content.data : "");
-        //return String.format("*From*: %s\n*To*: %s\n*Subject* %s\n\n%s", sender, recipient, subject, body);
     }
 
 
@@ -55,7 +53,6 @@ public class MailMessage {
             .filter(e -> e.type.startsWith("text/plain"))
             .findFirst()
             .orElse(null);
-
         return (content != null);
     }
 
@@ -65,8 +62,6 @@ public class MailMessage {
             .filter(e -> e.type.startsWith("text/html"))
             .findFirst()
             .orElse(null);
-
-        //return String.format("<b>From</b>: %s<br/><b>To</b>: %s<br/><b>Subject</b> %s<br/><br/>%s", sender, recipient, subject, body);
         return (content != null ? (String) content.data : "");
     }
 
@@ -76,7 +71,6 @@ public class MailMessage {
             .filter(e -> e.type.startsWith("text/html"))
             .findFirst()
             .orElse(null);
-
         return (content != null);
     }
 
@@ -86,7 +80,6 @@ public class MailMessage {
             .filter(e -> e.type.startsWith("image/"))
             .findFirst()
             .orElse(null);
-
         return (content != null);
     }
 
@@ -136,9 +129,10 @@ public class MailMessage {
 
     }
 
+
     @Override
     public String toString() {
-        return String.format("From: %; To: %s; Subject: %s", sender, recipient, subject);
+        return String.format("Sender: %; Recipient: %s; Subject: %s", sender, recipient, subject);
     }
 
 }

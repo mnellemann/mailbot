@@ -68,7 +68,6 @@ public class Application implements Callable<Integer>, MailReceivedListener {
             .messageHandler(mailHandler)
             .build();
 
-
         // Start SMTP server asynchronously
         smtpServer.start();
 
@@ -97,7 +96,6 @@ public class Application implements Callable<Integer>, MailReceivedListener {
     public void onEvent(MailEvent event) {
 
         String body;
-        ParseMode parseMode = ParseMode.Markdown;
         if(event.getMessage().hasText()) {
             body = event.getMessage().getText();
         } else if (event.getMessage().hasHtml()) {
@@ -115,12 +113,12 @@ public class Application implements Callable<Integer>, MailReceivedListener {
         if(event.getMessage().hasImage()) {
             SendPhoto photo = new SendPhoto(chatId, event.getMessage().getImage())
                 .caption(bodyWithHeader)
-                .parseMode(parseMode)
+                .parseMode(ParseMode.Markdown)
                 .disableNotification(true);
             sendPhoto(chatId, photo);
         } else {
             SendMessage message = new SendMessage(chatId, bodyWithHeader)
-                .parseMode(parseMode)
+                .parseMode(ParseMode.Markdown)
                 .disableWebPagePreview(true)
                 .disableNotification(true);
             sendMessage(chatId, message);
@@ -139,7 +137,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
         SendResponse sendResponse = bot.execute(request);
         boolean ok = sendResponse.isOk();
         if(!ok) {
-            log.warn("sendText() - text was not sent: {}, error", sendResponse.errorCode());
+            log.warn("sendText() - text was not sent, error: {} - {}", sendResponse.errorCode(), sendResponse.description());
         }
 
     }
@@ -151,7 +149,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
         SendResponse sendResponse = bot.execute(message);
         boolean ok = sendResponse.isOk();
         if(!ok) {
-            log.warn("sendMessage() - message was not sent, error: {}", sendResponse.errorCode());
+            log.warn("sendMessage() - message was not sent, error: {} - {}", sendResponse.errorCode(), sendResponse.description());
         }
     }
 
@@ -162,7 +160,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
         SendResponse sendResponse = bot.execute(photo);
         boolean ok = sendResponse.isOk();
         if(!ok) {
-            log.warn("sendPhoto() - photo was not sent, error: {}", sendResponse.errorCode());
+            log.warn("sendPhoto() - photo was not sent, error: {} - {}", sendResponse.errorCode(), sendResponse.description());
         }
 
     }
