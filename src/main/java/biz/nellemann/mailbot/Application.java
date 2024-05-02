@@ -16,6 +16,8 @@
 
 package biz.nellemann.mailbot;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -54,7 +56,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
     TelegramBot bot;
 
     @Override
-    public Integer call() throws InterruptedException {
+    public Integer call() throws InterruptedException, UnknownHostException {
 
         // Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> keepRunning.set(false)));
@@ -65,6 +67,7 @@ public class Application implements Callable<Integer>, MailReceivedListener {
 
         // Build the embedded SMTP server
         SMTPServer smtpServer = SMTPServer.port(port)
+            .bindAddress(InetAddress.getByAddress(new byte[] {0,0,0,0}))
             .messageHandler(mailHandler)
             .build();
 
