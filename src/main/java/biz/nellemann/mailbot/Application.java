@@ -127,6 +127,10 @@ public class Application implements Callable<Integer>, MailReceivedListener {
 
 
     private void sendText(String chatId, String text) {
+        if(text.length() >= 9500) {
+            log.error("sendText() - message exceeds maximum length of 9500");
+            return;
+        }
         log.info("sendText() - chatId: {}, text: {}", chatId, text);
 
         SendMessage request = new SendMessage(chatId, text)
